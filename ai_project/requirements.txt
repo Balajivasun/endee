@@ -1,0 +1,7 @@
+streamlit==1.32.2
+sentence-transformers==2.5.1
+requests==2.31.0
+numpy==1.26.4
+pandas==2.2.1
+groq==0.4.2
+python-dotenv==1.0.1
