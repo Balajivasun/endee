@@ -12,10 +12,7 @@ class MitigationAgent:
         self.client = EndeeClient()
         self.index_name = "verified_db"
         self.dimension = self.model.get_sentence_embedding_dimension()
-        try:
-            self.client.create_index(self.index_name, self.dimension)
-        except Exception as e:
-            raise ConnectionError("Make sure the Endee Vector Database is running on port 8080. Original Error: " + str(e))
+        self.client.create_index(self.index_name, self.dimension)
 
         self._seed_initial_facts()
 
@@ -48,7 +45,6 @@ class MitigationAgent:
         if not api_key:
             return "Configuration Error: GROQ_API_KEY is not set in environment.", "ERROR", ""
             
-        groq_client = Groq(api_key=api_key)
         context = self.fetch_context(query)
         
         if not context:
@@ -57,19 +53,40 @@ class MitigationAgent:
         else:
             prompt = f"Using ONLY the following context, answer the query factually.\n\nContext: {context}\n\nQuery: {query}"
         
-        raw_response = groq_client.chat.completions.create(
-            messages=[{"role": "user", "content": prompt}],
-            model="llama3-8b-8192",
-            temperature=0.7
-        ).choices[0].message.content
+        import requests
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            res1 = requests.post(url, headers=headers, json={
+                "model": "llama-3.1-8b-instant",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7
+            }, timeout=10).json()
+            if "error" in res1:
+                return f"Groq API Error: {res1['error'].get('message', 'Unknown Error')}. Have you set a real API key in `.env`?", "ERROR", context
+            raw_response = res1['choices'][0]['message']['content']
+        except Exception as e:
+            return f"LLM API Error: {str(e)}", "ERROR", context
         
         if context:
             verification_prompt = f"Fact/Context: {context}\nLLM Response: '{raw_response}'\nDoes the LLM Response contradict the Fact? Reply with exact isolated word: 'HALLUCINATION' if it contradicts, or 'FACTUAL' if it matches."
-            verification = groq_client.chat.completions.create(
-                messages=[{"role": "user", "content": verification_prompt}],
-                model="llama3-8b-8192",
-                temperature=0.0
-            ).choices[0].message.content
+            try:
+                res2 = requests.post(url, headers=headers, json={
+                    "model": "llama-3.1-8b-instant",
+                    "messages": [{"role": "user", "content": verification_prompt}],
+                    "temperature": 0.0
+                }, timeout=10).json()
+                verification = res2['choices'][0]['message']['content'].strip()
+                if "HALLUCINATION" in verification.upper():
+                    verification = "HALLUCINATION"
+                elif "FACTUAL" in verification.upper():
+                    verification = "FACTUAL"
+            except Exception:
+                verification = "UNVERIFIED"
         else:
             verification = "UNVERIFIED"
 
