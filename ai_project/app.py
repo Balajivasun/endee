@@ -3,44 +3,45 @@ import os
 from rag_engine import MitigationAgent
 
 st.set_page_config(
-    page_title="Context-Aware Hallucination Mitigation",
+    page_title="Context-Aware Hallucination Mitigation System",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 st.markdown("""
 <style>
-    .stApp {
-        background-color: #0e1117;
-        color: #ffffff;
+    /* Safe custom CSS */
+    .fact-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 10px;
     }
-    .css-1d391kg {
-        background-color: #1a1c23;
+    .badge-verified {
+        background-color: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        border: 1px solid #10b981;
     }
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        border-radius: 5px;
-        border: none;
-        padding: 10px 24px;
-        transition: all 0.3s;
+    .badge-warning {
+        background-color: rgba(239, 68, 68, 0.2);
+        color: #fb7185;
+        border: 1px solid #ef4444;
     }
-    .stButton>button:hover {
-        background-color: #45a049;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    .stTextInput>div>div>input {
-        background-color: #2b2e35;
-        color: white;
-        border-radius: 5px;
-        border: 1px solid #4CAF50;
-    }
-    h1, h2, h3 {
-        color: #e0e0e0;
-        font-family: 'Inter', sans-serif;
+    .main-title {
+        background: linear-gradient(to right, #4ade80, #3b82f6, #a855f7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 2rem;
     }
 </style>
 """, unsafe_allow_html=True)
+
+st.markdown('<div class="main-title">Context-Aware Hallucination Mitigation System</div>', unsafe_allow_html=True)
 
 if "agent" not in st.session_state:
     try:
@@ -52,52 +53,56 @@ if "agent" not in st.session_state:
 
 agent = st.session_state.agent
 
-st.title("Context-Aware Hallucination Mitigation System")
-st.markdown("Powered by **Endee Vector Database** for sub-millisecond similarity search and real-time contextual grounding.")
-
 if st.session_state.db_error:
-    st.error(f"⚠️ Backend Offline: {st.session_state.db_error}")
+    st.error("⚠️ Offline Mode: Database connection refused. Please start Endee Vector DB.")
 
 with st.sidebar:
-    st.header("Knowledge Ingestion")
-    st.markdown("Upload documents to build ground truth.")
-    doc_upload = st.file_uploader("Upload Ground Truth Document", type=["txt"])
-    if st.button("Process Document", disabled=agent is None):
+    st.markdown("### 📥 Knowledge Upload")
+    doc_upload = st.file_uploader("Upload reference documents", type=["txt"])
+    
+    if st.button("Index Content", disabled=agent is None, use_container_width=True, type="primary"):
         if agent is None:
-            st.error("Cannot process: Database offline.")
+            st.error("Cannot index while offline.")
         elif doc_upload:
             text = doc_upload.getvalue().decode('utf-8')
-            agent.load_document(text)
-            st.success("Document successfully indexed in Vector DB.")
+            with st.spinner("Processing..."):
+                agent.load_document(text)
+            st.success("Indexing complete.")
         else:
-            st.warning("Please upload a document first.")
+            st.warning("Please upload a file.")
 
-st.markdown("### LLM Interaction Panel")
-query = st.text_input("Enter your prompt for the LLM:")
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-if st.button("Generate & Verify", disabled=agent is None):
-    if agent is None:
-        st.error("Cannot generate: Database offline.")
-    elif not query:
-        st.warning("Please enter a prompt.")
-    else:
-        with st.spinner("Processing request through pipeline..."):
-            response, status, context = agent.generate_and_verify(query)
+# Display Chat History
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+        if "status" in msg:
+            if "HALLUCINATION" in msg["status"]:
+                st.markdown("<div class='fact-badge badge-warning'>⚠️ Potential Inaccuracy Detected</div>", unsafe_allow_html=True)
+            elif "FACTUAL" in msg["status"]:
+                st.markdown("<div class='fact-badge badge-verified'>✓ Verified Fact</div>", unsafe_allow_html=True)
+
+# Chat Input Flow
+if prompt := st.chat_input("Enter your prompt...", disabled=agent is None):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        if agent:
+            response, status, context = agent.generate_and_verify(prompt)
+            st.markdown(response)
             
-            col1, col2 = st.columns([2, 1])
-            
-            with col1:
-                st.markdown("#### Model Response")
-                st.info(response)
+            if "HALLUCINATION" in status:
+                st.markdown("<div class='fact-badge badge-warning'>⚠️ Potential Inaccuracy Detected</div>", unsafe_allow_html=True)
+            elif "FACTUAL" in status:
+                st.markdown("<div class='fact-badge badge-verified'>✓ Verified Fact</div>", unsafe_allow_html=True)
                 
-                with st.expander("View Retrieved Context"):
-                    st.write(context if context else "No context found.")
-            
-            with col2:
-                st.markdown("#### Verification Status")
-                if "HALLUCINATION" in status:
-                    st.error(f"Status: {status} ⚠️")
-                elif "FACTUAL" in status:
-                    st.success(f"Status: {status} ✅")
-                else:
-                    st.warning(f"Status: {status}")
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": response, 
+                "status": status
+            })
