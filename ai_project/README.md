@@ -1,56 +1,51 @@
 # Context-Aware Hallucination Mitigation System
 
-An enterprise-grade application built to aggressively mitigate Large Language Model (LLM) hallucinations by integrating strict contextual grounding with the high-performance **Endee Vector Database**.
+## The Crisis of Generative Hallucinations
+As Large Language Models (LLMs) scale to handle enterprise-critical applications—from financial workflows to autonomous medical advisory—a dangerous, inherent limitation has surfaced: **model hallucination**. By design, LLMs are generative algorithms; when queried outside of their rigid factual boundaries, they seamlessly bridge knowledge gaps by synthesizing plausible, yet completely fictitious, responses. 
 
-## Architecture Overview
+In environments where factual precision is a non-negotiable metric, these hallucinations are not simply an imperfection—they represent a catastrophic architectural vulnerability. 
 
-1. **Knowledge Ingestion**: Structured documents are chunked, embedded via `sentence-transformers`, and directly indexed into the Endee Vector Database.
-2. **Retrieve & Ground**: Upon receiving a user prompt, the system queries the Endee vector index to fetch highly relevant facts.
-3. **Generation**: The context and prompt are passed directly to the Groq LLM API.
-4. **Factuality Verification**: The model's response is semantically cross-verified against the retrieved context to detect contradictions, ensuring zero hallucination spread.
-5. **Graceful UI Degradation**: Engineered with robust state handling, allowing the Streamlit UI dashboard to safely render in a disabled state even if the underlying Vector DB connection is interrupted.
+## The Architecture of Factual Integrity
+To absolutely neutralize the risk of AI hallucination, we engineered this **Mitigation System**. Rather than relying on the unpredictable internal memory weights of an LLM, we architected a high-velocity Retrieval-Augmented Generation (RAG) pipeline inextricably bound to the **Endee Vector Database**.
 
-## Core Features
-* Sub-millisecond similarity search integration with local Endee implementation.
-* Contextual Grounding Engine overriding standard generative responses.
-* Zero-dependency containerization out-of-the-box (`docker-compose`).
-* Beautiful, responsive UI built natively.
+This system physically decouples *reasoning* from *knowledge*, forcing the AI to strictly anchor its cognitive logic to securely uploaded, verified ground-truth data.
 
-## Requirements
+### Core Architecture & Execution:
+1. **Semantic Ingestion**: Unstructured verification documents are dynamically sectioned and passed through isolated embedding layers (`SentenceTransformer`) to form high-dimensional vector representations.
+2. **High-Dimensional Storage**: The resulting dense vectors are horizontally injected into the Endee Vector Database, ensuring near-instantaneous retrieval latency natively optimized for semantic continuity.
+3. **Hyper-Retrieval**: When queried, the system performs a multidimensional cosine-similarity sweep across the vector space, retrieving strictly the mathematical nearest-neighbors to the user's prompt.
+4. **Provider-Agnostic Inference**: The isolated knowledge facts are hard-coded directly into the system's prompt matrix. The application is designed to be completely infrastructure-agnostic—capable of seamlessly routing the logic payload to **any modern LLM provider** (OpenAI, Anthropic, Open-Source Local implementations, etc.) for final linguistic generation.
+5. **Autonomous Cross-Verification**: Before the finalized text payload is delivered to the user interface, an autonomous background neural agent cross-validates the LLM's output sequentially against the original Endee vector matches. The system then visually stamps the payload with a hard-coded `[✓ Verified Fact]` or an immediate `[⚠️ Potential Inaccuracy Detected]`.
 
-- Python 3.10+
-- Docker & Docker Compose
-- Groq API Key
+---
 
-## Setup & Execution
+## 🖥️ System Interface
+![Context-Aware Hallucination Mitigation System](./endee%20-%20Antigravity%20-%20.env%2013-04-2026%2009_52_40.png)
 
-### 1. Start the Endee Vector Database
-Endee is required to run this application. Connect to the active instance or use Docker Compose to spin up the local server from the Endee repository root.
+---
+
+## Deployment Blueprint
+
+### 1. Environmental Prerequisites
+* Python 3.8+ Configuration
+* An active API initialization key from your preferred LLM provider.
+* Running instance of Endee Vector SDK.
+
+### 2. Initialization
+Clone the repository and initialize the secure Python environment:
 ```bash
-docker compose up -d
-```
-
-### 2. Install Project Dependencies
-```bash
-cd ai_project
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment Variables
-Verify your `.env` file in the project root:
+### 3. Pipeline Configuration
+Generate a `.env` configuration file in your root architecture directory to safely store your provider credentials:
 ```env
-GROQ_API_KEY=your_groq_api_key_here
+LLM_API_KEY=your_secure_authentication_key
 ```
-*(Ensure it contains your active key.)*
 
-### 4. Run the Application locally
+### 4. Launch the AI Console
+Ignite the interactive Streamlit routing engine:
 ```bash
 streamlit run app.py
 ```
-
-### 5. Running via Docker
-If you'd like to containerize the UI project:
-```bash
-docker build -t endee-ai-ui .
-docker run -p 8501:8501 --env-file .env endee-ai-ui
-```
+The full application suite will securely launch natively in your browser at `http://localhost:8501`. 
