@@ -1,0 +1,15 @@
+[theme]
+# Primary accent color (used for buttons, focus areas)
+primaryColor="#3b82f6"
+
+# Main background color
+backgroundColor="#020617"
+
+# Sidebar and secondary elements background
+secondaryBackgroundColor="#0f172a"
+
+# Text color
+textColor="#f8fafc"
+
+# Font choice
+font="sans serif"
